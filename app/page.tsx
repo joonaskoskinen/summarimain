@@ -28,7 +28,6 @@ import { generateSummary, type SummaryResult } from "./actions/summarize"
 import { createCheckoutSession } from "./actions/stripe"
 import { SkeletonResult } from "@/components/skeleton-result"
 import { InfoBox } from "@/components/info-box"
-import PremiumBanner from "@/components/premium-banner"
 import { getUsageData, incrementUsage, canUseService, isPremiumActive } from "../utils/usageTracker"
 
 export default function Home() {
@@ -36,7 +35,6 @@ export default function Home() {
   const [result, setResult] = useState<SummaryResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [template, setTemplate] = useState<"auto" | "meeting" | "email" | "project">("auto")
-  const [showPremiumBanner, setShowPremiumBanner] = useState(false)
   const [usageData, setUsageData] = useState(getUsageData())
   const { toast } = useToast()
 
@@ -44,11 +42,6 @@ export default function Home() {
   useEffect(() => {
     const data = getUsageData()
     setUsageData(data)
-
-    // Näytä premium-banneri jos ei ole premium ja on käyttänyt palvelua
-    if (!data.isPremium && data.count > 0) {
-      setShowPremiumBanner(true)
-    }
   }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -97,7 +90,6 @@ export default function Home() {
         description: "Olet käyttänyt kaikki 3 ilmaista yhteenvetoa tänään. Hanki Premium jatkaaksesi!",
         variant: "destructive",
       })
-      setShowPremiumBanner(true)
       return
     }
 
@@ -111,11 +103,6 @@ export default function Home() {
       // Päivitä käyttölaskuri vain onnistuneen yhteenvedon jälkeen
       const newUsageData = incrementUsage()
       setUsageData(newUsageData)
-
-      // Näytä premium-banneri jos ei ole premium
-      if (!newUsageData.isPremium) {
-        setShowPremiumBanner(true)
-      }
 
       toast({
         title: "Valmis! ✨",
@@ -532,9 +519,6 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
           </div>
         )}
       </div>
-
-      {/* Premium Banner */}
-      {showPremiumBanner && !isPremium && <PremiumBanner onClose={() => setShowPremiumBanner(false)} />}
 
       <Toaster />
     </div>
