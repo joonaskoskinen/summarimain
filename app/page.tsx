@@ -27,7 +27,6 @@ import { Toaster } from "@/components/ui/toaster"
 import { generateSummary, type SummaryResult } from "./actions/summarize"
 import { createCheckoutSession } from "./actions/stripe"
 import { SkeletonResult } from "@/components/skeleton-result"
-import { Confetti } from "@/components/confetti"
 import { InfoBox } from "@/components/info-box"
 import PremiumBanner from "@/components/premium-banner"
 import { getUsageData, incrementUsage, canUseService, isPremiumActive } from "../utils/usageTracker"
@@ -37,7 +36,6 @@ export default function Home() {
   const [result, setResult] = useState<SummaryResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [template, setTemplate] = useState<"auto" | "meeting" | "email" | "project">("auto")
-  const [showConfetti, setShowConfetti] = useState(false)
   const [showPremiumBanner, setShowPremiumBanner] = useState(false)
   const [usageData, setUsageData] = useState(getUsageData())
   const { toast } = useToast()
@@ -114,11 +112,6 @@ export default function Home() {
       const newUsageData = incrementUsage()
       setUsageData(newUsageData)
 
-      // Näytä konfetti ensimmäisellä kerralla
-      if (newUsageData.count === 1) {
-        setShowConfetti(true)
-      }
-
       // Näytä premium-banneri jos ei ole premium
       if (!newUsageData.isPremium) {
         setShowPremiumBanner(true)
@@ -130,9 +123,13 @@ export default function Home() {
       })
     } catch (error) {
       console.error("Summary generation failed:", error)
+
+      // Tarkempi virheilmoitus
+      const errorMessage = error instanceof Error ? error.message : "Yhteenvedon luominen epäonnistui. Yritä uudelleen."
+
       toast({
         title: "Virhe",
-        description: "Yhteenvedon luominen epäonnistui. Yritä uudelleen.",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
@@ -230,8 +227,6 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <Confetti show={showConfetti} onComplete={() => setShowConfetti(false)} />
-
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-8">
