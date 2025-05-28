@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import {
   Copy,
   Download,
@@ -28,7 +30,14 @@ import { generateSummary, type SummaryResult } from "./actions/summarize"
 import { createCheckoutSession } from "./actions/stripe"
 import { SkeletonResult } from "@/components/skeleton-result"
 import { InfoBox } from "@/components/info-box"
-import { getUsageData, incrementUsage, canUseService, isPremiumActive, revokePremium } from "../utils/usageTracker"
+import {
+  getUsageData,
+  incrementUsage,
+  canUseService,
+  isPremiumActive,
+  revokePremium,
+  redeemCode,
+} from "../utils/usageTracker"
 
 export default function Home() {
   const [text, setText] = useState("")
@@ -37,6 +46,12 @@ export default function Home() {
   const [template, setTemplate] = useState<"auto" | "meeting" | "email" | "project">("auto")
   const [usageData, setUsageData] = useState(getUsageData())
   const { toast } = useToast()
+
+  // Lisää tilamuuttujat komponenttiin
+  const [codeDialogOpen, setCodeDialogOpen] = useState(false)
+  const [redemptionCode, setRedemptionCode] = useState("")
+  const [isRedeeming, setIsRedeeming] = useState(false)
+  const codeInputRef = useRef<HTMLInputElement>(null)
 
   // Tarkista premium-status ja käyttöoikeudet sivun latautuessa
   useEffect(() => {
@@ -99,6 +114,47 @@ export default function Home() {
         description: "Maksujärjestelmässä tapahtui virhe",
         variant: "destructive",
       })
+    }
+  }
+
+  // Lisää funktio koodin lunastamiseen
+  const handleRedeemCode = async () => {
+    if (!redemptionCode.trim()) {
+      toast({
+        title: "Virhe",
+        description: "Syötä koodi ensin",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsRedeeming(true)
+    try {
+      const result = await redeemCode(redemptionCode)
+
+      if (result.success) {
+        toast({
+          title: "Onnistui! 🎉",
+          description: "Premium-ominaisuudet aktivoitu onnistuneesti!",
+        })
+        setCodeDialogOpen(false)
+        setUsageData(getUsageData()) // Päivitä käyttötiedot
+      } else {
+        toast({
+          title: "Virhe",
+          description: result.message || "Koodin lunastus epäonnistui",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Code redemption error:", error)
+      toast({
+        title: "Virhe",
+        description: "Koodin lunastuksessa tapahtui virhe",
+        variant: "destructive",
+      })
+    } finally {
+      setIsRedeeming(false)
     }
   }
 
@@ -174,11 +230,30 @@ ${result.keyPoints.map((point, i) => `${i + 1}. ${point}`).join("\n")}
 TOIMENPITEET
 ${result.actionItems.map((item, i) => `${i + 1}. ${item}`).join("\n")}
 
-${result.deadlines && result.deadlines.length > 0 ? `DEADLINET\n${result.deadlines.map((d, i) => `${i + 1}. ${d.task} (${d.person}, ${d.deadline})`).join("\n")}\n\n` : ""}
+${
+  result.deadlines && result.deadlines.length > 0
+    ? `DEADLINET
+${result.deadlines.map((d, i) => `${i + 1}. ${d.task} (${d.person}, ${d.deadline})`).join("\n")}
 
-${result.pendingDecisions && result.pendingDecisions.length > 0 ? `AVOIMET PÄÄTÖKSET\n${result.pendingDecisions.map((d, i) => `${i + 1}. ${d}`).join("\n")}\n\n` : ""}
+`
+    : ""
+}
 
-${result.responseTemplate ? `VASTAUSLUONNOS\n${result.responseTemplate}` : ""}
+${
+  result.pendingDecisions && result.pendingDecisions.length > 0
+    ? `AVOIMET PÄÄTÖKSET
+${result.pendingDecisions.map((d, i) => `${i + 1}. ${d}`).join("\n")}
+
+`
+    : ""
+}
+
+${
+  result.responseTemplate
+    ? `VASTAUSLUONNOS
+${result.responseTemplate}`
+    : ""
+}
 
 ---
 Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
@@ -537,6 +612,23 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
               <Crown className="h-5 w-5 mr-2" />
               Hanki Unlimited - 19€/kk
             </Button>
+            <div className="flex justify-center mt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCodeDialogOpen(true)
+                  // Fokusoi input-kenttään kun dialogi aukeaa
+                  setTimeout(() => {
+                    if (codeInputRef.current) {
+                      codeInputRef.current.focus()
+                    }
+                  }, 100)
+                }}
+                className="text-amber-600 hover:text-amber-700"
+              >
+                Minulla on koodi
+              </Button>
+            </div>
             <p className="text-sm text-gray-500 mb-3">
               ✅ Rajaton määrä yhteenvetoja • ✅ Ei mainoksia • ✅ Nopeampi prosessointi
             </p>
@@ -548,6 +640,47 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
             </p>
           </div>
         )}
+        {/* Koodi-dialogi */}
+        <Dialog open={codeDialogOpen} onOpenChange={setCodeDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Lunasta koodi</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-gray-600">Syötä aktivointikoodi saadaksesi premium-ominaisuudet käyttöön.</p>
+              <Input
+                ref={codeInputRef}
+                placeholder="Esim. SUMMARI2024"
+                value={redemptionCode}
+                onChange={(e) => setRedemptionCode(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleRedeemCode()
+                  }
+                }}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCodeDialogOpen(false)}>
+                Peruuta
+              </Button>
+              <Button
+                onClick={handleRedeemCode}
+                disabled={isRedeeming || !redemptionCode.trim()}
+                className="bg-gradient-to-r from-blue-600 to-purple-600"
+              >
+                {isRedeeming ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    Tarkistetaan...
+                  </>
+                ) : (
+                  "Lunasta"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Toaster />
