@@ -518,15 +518,3 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
     </div>
   )
 }
-
-const priorityOrder: { [key: string]: number } = {
-  high: 0,
-  medium: 1,
-  low: 2,
-}
-
-function sortDeadlines(deadlines: any[]) {
-  return [...deadlines].sort((a, b) => {
-    return (priorityOrder[b.priority || "medium"] || 2) - (priorityOrder[a.priority || "medium"] || 2)
-  })
-}
