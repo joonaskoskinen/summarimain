@@ -672,7 +672,7 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
               <p className="text-sm text-gray-600">Syötä aktivointikoodi saadaksesi premium-ominaisuudet käyttöön.</p>
               <Input
                 ref={codeInputRef}
-                placeholder="Esim. SUMMARI2024"
+                placeholder=""
                 value={redemptionCode}
                 onChange={(e) => setRedemptionCode(e.target.value)}
                 onKeyDown={(e) => {
