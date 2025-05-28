@@ -1,8 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-// Tässä esimerkissä käytämme kovakoodattuja koodeja
-// Tuotannossa nämä tulisivat tietokannasta
-const VALID_CODES = ["SUMMARI2024", "KOSKELO123", "TESTCODE"]
+// Koodit environment variablesta tai tietokannasta
+// Tuotannossa nämä tulisivat tietokannasta käytettyjen koodien seurantaa varten
+const getValidCodes = () => {
+  // Environment variablesta pilkulla erotettu lista
+  const envCodes = process.env.VALID_REDEMPTION_CODES || ""
+  return envCodes
+    .split(",")
+    .map((code) => code.trim())
+    .filter(Boolean)
+}
+
+// Vaihtoehtoisesti voit käyttää kovakoodattuja koodeja vain serverillä
+const HARDCODED_CODES = ["SUMMARI2024", "KOSKELO123", "TESTCODE"]
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,10 +22,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Koodi puuttuu" }, { status: 400 })
     }
 
-    // Tarkista onko koodi validi
-    const isValid = VALID_CODES.some((validCode) => validCode.toLowerCase() === code.toLowerCase())
+    // Hae koodit environment variablesta tai käytä kovakoodattuja
+    const validCodes = process.env.VALID_REDEMPTION_CODES ? getValidCodes() : HARDCODED_CODES
+
+    // Tarkista onko koodi validi (case-insensitive)
+    const isValid = validCodes.some((validCode) => validCode.toLowerCase() === code.toLowerCase())
 
     if (isValid) {
+      // Tuotannossa tässä merkittäisiin koodi käytetyksi tietokantaan
+      console.log(`Koodi lunastettu: ${code}`)
+
       return NextResponse.json({
         success: true,
         message: "Koodi hyväksytty!",
