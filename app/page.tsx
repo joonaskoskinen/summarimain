@@ -604,34 +604,55 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
         {/* Purchase section for non-premium users */}
         {!isPremium && (
           <div className="text-center pt-8 border-t border-gray-200 mt-8">
-            <p className="text-lg text-gray-600 mb-4">Tarvitset enemmän yhteenvetoja?</p>
-            <Button
-              onClick={handlePurchase}
-              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white px-8 py-3 text-lg font-medium mb-4"
-            >
-              <Crown className="h-5 w-5 mr-2" />
-              Hanki Unlimited - 19€/kk
-            </Button>
-            <div className="flex justify-center mt-2">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-6 rounded-xl border border-amber-200 mb-6">
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Tarvitset enemmän yhteenvetoja?</h3>
+              <p className="text-lg text-gray-600 mb-4">
+                Unlimited-tilaus = rajaton käyttö + kaikki premium-ominaisuudet
+              </p>
               <Button
-                variant="outline"
-                onClick={() => {
-                  setCodeDialogOpen(true)
-                  // Fokusoi input-kenttään kun dialogi aukeaa
-                  setTimeout(() => {
-                    if (codeInputRef.current) {
-                      codeInputRef.current.focus()
-                    }
-                  }, 100)
-                }}
-                className="text-amber-600 hover:text-amber-700"
+                onClick={handlePurchase}
+                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white px-8 py-3 text-lg font-medium mb-4"
               >
-                Minulla on koodi
+                <Crown className="h-5 w-5 mr-2" />
+                Hanki Unlimited - 19€/kk
               </Button>
+              <div className="flex justify-center mt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setCodeDialogOpen(true)
+                    // Fokusoi input-kenttään kun dialogi aukeaa
+                    setTimeout(() => {
+                      if (codeInputRef.current) {
+                        codeInputRef.current.focus()
+                      }
+                    }, 100)
+                  }}
+                  className="text-amber-600 hover:text-amber-700"
+                >
+                  Minulla on koodi
+                </Button>
+              </div>
             </div>
-            <p className="text-sm text-gray-500 mb-3">
-              ✅ Rajaton määrä yhteenvetoja • ✅ Ei mainoksia • ✅ Nopeampi prosessointi
-            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="p-4 bg-white/80 rounded-lg border border-green-200">
+                <div className="text-green-600 text-2xl mb-2">⚡</div>
+                <h4 className="font-semibold mb-1">Rajaton käyttö</h4>
+                <p className="text-sm text-gray-600">Niin monta yhteenvetoa kuin tarvitset</p>
+              </div>
+              <div className="p-4 bg-white/80 rounded-lg border border-blue-200">
+                <div className="text-blue-600 text-2xl mb-2">🚀</div>
+                <h4 className="font-semibold mb-1">Nopeampi prosessointi</h4>
+                <p className="text-sm text-gray-600">Prioriteettijono ja parempi suorituskyky</p>
+              </div>
+              <div className="p-4 bg-white/80 rounded-lg border border-purple-200">
+                <div className="text-purple-600 text-2xl mb-2">📁</div>
+                <h4 className="font-semibold mb-1">Lataa tiedostona</h4>
+                <p className="text-sm text-gray-600">Tallenna yhteenvedot .txt-muodossa</p>
+              </div>
+            </div>
+
             <p className="text-xs text-gray-500">
               💼 Laskutus tai yrityskäyttö? Ota yhteyttä:
               <a href="mailto:summariapp@gmail.com" className="underline hover:text-gray-700 ml-1">
@@ -640,6 +661,7 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
             </p>
           </div>
         )}
+
         {/* Koodi-dialogi */}
         <Dialog open={codeDialogOpen} onOpenChange={setCodeDialogOpen}>
           <DialogContent className="sm:max-w-md">
