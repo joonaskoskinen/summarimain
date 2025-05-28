@@ -1,101 +1,71 @@
 "use client"
 
+import type React from "react"
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Progress } from "@/components/ui/progress"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-  Brain,
+  Copy,
+  Download,
+  Crown,
+  Mail,
+  Calendar,
   FileText,
+  Users,
   Clock,
   CheckCircle,
   AlertCircle,
-  Download,
   Sparkles,
-  Crown,
-  Loader2,
-  Calendar,
-  User,
-  ArrowRight,
 } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
+import { Toaster } from "@/components/ui/toaster"
 import { generateSummary, type SummaryResult } from "./actions/summarize"
 import { createCheckoutSession } from "./actions/stripe"
-import { PremiumBanner } from "@/components/premium-banner"
-import { canUseService, incrementUsage, isPremiumActive } from "../utils/usageTracker"
 import { SkeletonResult } from "@/components/skeleton-result"
+import { Confetti } from "@/components/confetti"
+import { InfoBox } from "@/components/info-box"
+import PremiumBanner from "@/components/premium-banner"
+import { getUsageData, incrementUsage, canUseService, isPremiumActive } from "../utils/usageTracker"
 
-export default function SummariApp() {
-  const [content, setContent] = useState("")
-  const [template, setTemplate] = useState<"auto" | "meeting" | "email" | "project">("auto")
+export default function Home() {
+  const [text, setText] = useState("")
   const [result, setResult] = useState<SummaryResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
+  const [template, setTemplate] = useState<"auto" | "meeting" | "email" | "project">("auto")
+  const [showConfetti, setShowConfetti] = useState(false)
   const [showPremiumBanner, setShowPremiumBanner] = useState(false)
-  const [usageInfo, setUsageInfo] = useState({ allowed: true, remaining: 3 })
-  const [isPremium, setIsPremium] = useState(false)
+  const [usageData, setUsageData] = useState(getUsageData())
+  const { toast } = useToast()
 
-  // Check usage and premium status on component mount
+  // Tarkista premium-status ja käyttöoikeudet sivun latautuessa
   useEffect(() => {
-    const usage = canUseService()
-    const premium = isPremiumActive()
-    setUsageInfo(usage)
-    setIsPremium(premium)
+    const data = getUsageData()
+    setUsageData(data)
 
-    // Show premium banner if user has used all free summaries
-    if (!premium && usage.remaining === 0) {
+    // Näytä premium-banneri jos ei ole premium ja on käyttänyt palvelua
+    if (!data.isPremium && data.count > 0) {
       setShowPremiumBanner(true)
     }
   }, [])
 
-  const handleSubmit = async () => {
-    if (!content.trim()) {
-      setError("Syötä teksti, josta haluat yhteenvedon")
-      return
-    }
-
-    // Check if user can use the service
-    const usage = canUseService()
-    if (!usage.allowed) {
-      setShowPremiumBanner(true)
-      setError("Ilmaiset yhteenvedot loppuivat tältä päivältä. Aktivoi Unlimited-koodi tai osta tilaus.")
-      return
-    }
-
-    setIsLoading(true)
-    setError("")
-    setResult(null)
-
-    try {
-      // Increment usage count
-      const newUsage = incrementUsage()
-      setUsageInfo({ allowed: newUsage.count < 3 || isPremiumActive(), remaining: Math.max(0, 3 - newUsage.count) })
-
-      const summary = await generateSummary(content, template)
-      setResult(summary)
-
-      // Show premium banner if this was the last free summary
-      if (!isPremiumActive() && newUsage.count >= 3) {
-        setShowPremiumBanner(true)
-      }
-    } catch (err) {
-      console.error("Summary generation failed:", err)
-      setError(err instanceof Error ? err.message : "Yhteenvedon luominen epäonnistui")
-    } finally {
-      setIsLoading(false)
-    }
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setText(e.target.value)
   }
 
   const handlePurchase = async () => {
     try {
       const { url, error } = await createCheckoutSession()
       if (error) {
-        setError(error)
+        toast({
+          title: "Virhe",
+          description: error,
+          variant: "destructive",
+        })
         return
       }
       if (url) {
@@ -103,15 +73,85 @@ export default function SummariApp() {
       }
     } catch (err) {
       console.error("Checkout error:", err)
-      setError("Maksujärjestelmässä tapahtui virhe")
+      toast({
+        title: "Virhe",
+        description: "Maksujärjestelmässä tapahtui virhe",
+        variant: "destructive",
+      })
     }
   }
 
-  const downloadAsText = () => {
+  const handleSubmit = async () => {
+    if (!text.trim()) {
+      toast({
+        title: "Virhe",
+        description: "Syötä teksti ensin",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Tarkista käyttöoikeudet
+    const { allowed, remaining } = canUseService()
+    if (!allowed) {
+      toast({
+        title: "Käyttöraja täynnä",
+        description: "Olet käyttänyt kaikki 3 ilmaista yhteenvetoa tänään. Hanki Premium jatkaaksesi!",
+        variant: "destructive",
+      })
+      setShowPremiumBanner(true)
+      return
+    }
+
+    setIsLoading(true)
+    setResult(null)
+
+    try {
+      const summaryResult = await generateSummary(text, template)
+      setResult(summaryResult)
+
+      // Päivitä käyttölaskuri vain onnistuneen yhteenvedon jälkeen
+      const newUsageData = incrementUsage()
+      setUsageData(newUsageData)
+
+      // Näytä konfetti ensimmäisellä kerralla
+      if (newUsageData.count === 1) {
+        setShowConfetti(true)
+      }
+
+      // Näytä premium-banneri jos ei ole premium
+      if (!newUsageData.isPremium) {
+        setShowPremiumBanner(true)
+      }
+
+      toast({
+        title: "Valmis! ✨",
+        description: `Yhteenveto luotu onnistuneesti. Jäljellä ${Math.max(0, 3 - newUsageData.count)} ilmaista yhteenvetoa tänään.`,
+      })
+    } catch (error) {
+      console.error("Summary generation failed:", error)
+      toast({
+        title: "Virhe",
+        description: "Yhteenvedon luominen epäonnistui. Yritä uudelleen.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleCopyToClipboard = (content: string) => {
+    navigator.clipboard.writeText(content)
+    toast({
+      title: "Kopioitu! 📋",
+      description: "Sisältö kopioitu leikepöydälle",
+    })
+  }
+
+  const handleDownload = () => {
     if (!result) return
 
-    const textContent = `
-YHTEENVETO
+    const content = `YHTEENVETO
 ${result.summary}
 
 TÄRKEIMMÄT ASIAT
@@ -120,37 +160,17 @@ ${result.keyPoints.map((point, i) => `${i + 1}. ${point}`).join("\n")}
 TOIMENPITEET
 ${result.actionItems.map((item, i) => `${i + 1}. ${item}`).join("\n")}
 
-${
-  result.deadlines && result.deadlines.length > 0
-    ? `
-DEADLINET
-${result.deadlines.map((deadline, i) => `${i + 1}. ${deadline.task} (${deadline.person}) - ${deadline.deadline} [${deadline.priority}]`).join("\n")}
-`
-    : ""
-}
+${result.deadlines && result.deadlines.length > 0 ? `DEADLINET\n${result.deadlines.map((d, i) => `${i + 1}. ${d.task} (${d.person}, ${d.deadline})`).join("\n")}\n\n` : ""}
 
-${
-  result.pendingDecisions && result.pendingDecisions.length > 0
-    ? `
-AVOIMET PÄÄTÖKSET
-${result.pendingDecisions.map((decision, i) => `${i + 1}. ${decision}`).join("\n")}
-`
-    : ""
-}
+${result.pendingDecisions && result.pendingDecisions.length > 0 ? `AVOIMET PÄÄTÖKSET\n${result.pendingDecisions.map((d, i) => `${i + 1}. ${d}`).join("\n")}\n\n` : ""}
 
-${
-  result.responseTemplate
-    ? `
-VASTAUSLUONNOS
-${result.responseTemplate}
-`
-    : ""
-}
+${result.responseTemplate ? `VASTAUSLUONNOS\n${result.responseTemplate}` : ""}
 
+---
 Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
-    `.trim()
+`
 
-    const blob = new Blob([textContent], { type: "text/plain;charset=utf-8" })
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
@@ -159,16 +179,40 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+
+    toast({
+      title: "Ladattu! 📁",
+      description: "Yhteenveto ladattu tiedostona",
+    })
   }
 
-  const handlePremiumActivated = () => {
-    setShowPremiumBanner(false)
-    setIsPremium(true)
-    setUsageInfo({ allowed: true, remaining: -1 })
-    setError("")
+  const getContentTypeIcon = (type?: string) => {
+    switch (type) {
+      case "meeting":
+        return <Users className="h-4 w-4" />
+      case "email":
+        return <Mail className="h-4 w-4" />
+      case "project":
+        return <FileText className="h-4 w-4" />
+      default:
+        return <FileText className="h-4 w-4" />
+    }
   }
 
-  const getPriorityColor = (priority: string) => {
+  const getContentTypeLabel = (type?: string) => {
+    switch (type) {
+      case "meeting":
+        return "Kokous"
+      case "email":
+        return "Sähköposti"
+      case "project":
+        return "Projekti"
+      default:
+        return "Yleinen"
+    }
+  }
+
+  const getPriorityColor = (priority?: string) => {
     switch (priority) {
       case "high":
         return "bg-red-100 text-red-800 border-red-200"
@@ -181,112 +225,94 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
     }
   }
 
+  const { allowed, remaining } = canUseService()
+  const isPremium = isPremiumActive()
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 bg-[url('/noise.png')] bg-fixed">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <Confetti show={showConfetti} onComplete={() => setShowConfetti(false)} />
+
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Brain className="h-7 w-7 text-white" />
+          <div className="flex items-center justify-center mb-2">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full p-3 shadow-lg">
+              <FileText className="h-8 w-8" />
             </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold text-gray-900 ml-3">
               Summari
+              <span className="text-2xl ml-2">🇫🇮</span>
             </h1>
-            {isPremium && (
-              <Badge className="bg-gradient-to-r from-amber-500 via-orange-400 to-orange-500 text-white border-0">
-                <Crown className="h-3 w-3 mr-1" />
-                Unlimited
-              </Badge>
-            )}
           </div>
-          <p className="text-xl text-gray-600 mb-2">Älykkäät yhteenvedot suomeksi</p>
-          <p className="text-gray-500">Muuta pitkät tekstit toimintasuunnitelmiksi AI:n avulla</p>
-
-          {/* Usage indicator */}
-          {!isPremium && (
-            <div className="mt-4 max-w-md mx-auto">
-              <div className="flex justify-between text-sm text-gray-600 mb-2">
-                <span>Ilmaiset yhteenvedot tänään</span>
-                <span>{usageInfo.remaining}/3</span>
-              </div>
-              <Progress value={(usageInfo.remaining / 3) * 100} className="h-2" />
-            </div>
-          )}
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Muuta pitkät tekstit toimintasuunnitelmiksi AI:n avulla. Täysin suomeksi.
+          </p>
         </div>
 
-        {/* Premium Banner */}
-        {showPremiumBanner && (
-          <div className="mb-6">
-            <PremiumBanner
-              remaining={usageInfo.remaining}
-              onPremiumActivated={handlePremiumActivated}
-              onClose={() => setShowPremiumBanner(false)}
-            />
+        {/* Info Box */}
+        <InfoBox />
+
+        {/* Usage indicator */}
+        {!isPremium && (
+          <div className="mb-6 p-4 bg-white/80 backdrop-blur-sm rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className={`w-3 h-3 rounded-full ${i <= usageData.count ? "bg-blue-500" : "bg-gray-200"}`}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm text-gray-600">{remaining} ilmaista yhteenvetoa jäljellä tänään</span>
+              </div>
+              {remaining === 0 && (
+                <Button onClick={handlePurchase} size="sm" className="bg-gradient-to-r from-amber-500 to-amber-600">
+                  <Crown className="h-4 w-4 mr-2" />
+                  Hanki Unlimited
+                </Button>
+              )}
+            </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Input Section */}
-          <Card className="shadow-xl border border-white/20 bg-white/80 backdrop-blur-md transition-all duration-300 hover:shadow-blue-100/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <FileText className="h-5 w-5 text-blue-600" />
-                Syötä teksti
-              </CardTitle>
-              <CardDescription>
-                Liitä kokousmuistio, sähköposti tai muu teksti, josta haluat yhteenvedon
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Valitse malli (valinnainen):</label>
-                <Select
-                  value={template}
-                  onValueChange={(value: "auto" | "meeting" | "email" | "project") => setTemplate(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="auto">🤖 Automaattinen tunnistus</SelectItem>
-                    <SelectItem value="meeting">👥 Kokousmuistio</SelectItem>
-                    <SelectItem value="email">📧 Sähköposti</SelectItem>
-                    <SelectItem value="project">📋 Projektisuunnitelma</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Textarea
-                placeholder="Liitä tähän teksti, josta haluat yhteenvedon... (vähintään 10 merkkiä)"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="min-h-[300px] resize-none border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-              />
-
-              <div className="flex justify-between items-center text-sm text-gray-500">
-                <span>{content.length} merkkiä</span>
-                {content.length < 10 && content.length > 0 && (
-                  <span className="text-amber-600">Vähintään 10 merkkiä tarvitaan</span>
-                )}
-              </div>
-
-              {error && (
-                <Alert className="border-red-200 bg-red-50">
-                  <AlertCircle className="h-4 w-4 text-red-600" />
-                  <AlertDescription className="text-red-700">{error}</AlertDescription>
-                </Alert>
-              )}
-
+        {/* Main input area */}
+        <Card className="mb-8 shadow-lg border-0 bg-white/90 backdrop-blur-sm">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl">Syötä teksti</CardTitle>
+              <Select value={template} onValueChange={(value: any) => setTemplate(value)}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">🤖 Automaatti</SelectItem>
+                  <SelectItem value="meeting">👥 Kokous</SelectItem>
+                  <SelectItem value="email">📧 Sähköposti</SelectItem>
+                  <SelectItem value="project">📋 Projekti</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Textarea
+              placeholder="Liitä tähän kokousmuistio, sähköposti, dokumentti tai mikä tahansa teksti jonka haluat tiivistää..."
+              className="min-h-[200px] text-base leading-relaxed resize-none border-gray-200 focus:border-blue-400 focus:ring-blue-400"
+              value={text}
+              onChange={handleInputChange}
+            />
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-500">{text.length > 0 && `${text.length} merkkiä`}</div>
               <Button
                 onClick={handleSubmit}
-                disabled={isLoading || content.length < 10 || (!usageInfo.allowed && !isPremium)}
-                className="w-full bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 hover:from-blue-700 hover:via-indigo-600 hover:to-purple-700 text-white font-medium py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                disabled={isLoading || !text.trim() || !allowed}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-2 text-base font-medium"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Luodaan yhteenvetoa...
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    Analysoidaan...
                   </>
                 ) : (
                   <>
@@ -295,279 +321,227 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
                   </>
                 )}
               </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-              {!isPremium && (
-                <div className="text-center pt-4 border-t border-gray-200">
-                  <p className="text-sm text-gray-600 mb-3">Tarvitset enemmän yhteenvetoja?</p>
-                  <Button
-                    onClick={handlePurchase}
-                    variant="outline"
-                    className="border-amber-300 text-amber-700 hover:bg-amber-50"
-                  >
-                    <Crown className="h-4 w-4 mr-2" />
-                    Hanki Unlimited - 19€/kk
+        {/* Loading skeleton */}
+        {isLoading && <SkeletonResult />}
+
+        {/* Results */}
+        {result && !isLoading && (
+          <Card className="shadow-lg border-0 bg-white/95 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CardTitle className="text-2xl">Yhteenveto</CardTitle>
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    {getContentTypeIcon(result.contentType)}
+                    {getContentTypeLabel(result.contentType)}
+                  </Badge>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(result.summary)}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Kopioi
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleDownload}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Lataa
                   </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Results Section */}
-          <Card className="shadow-xl border border-white/20 bg-white/80 backdrop-blur-md transition-all duration-300 hover:shadow-purple-100/20">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Brain className="h-5 w-5 text-purple-600" />
-                  Yhteenveto
-                </CardTitle>
-                {result && (isPremium || true) && (
-                  <Button
-                    onClick={downloadAsText}
-                    variant="outline"
-                    size="sm"
-                    className="border-green-300 text-green-700 hover:bg-green-50 transition-all duration-200 hover:scale-105 active:scale-95"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Lataa .txt
-                  </Button>
-                )}
               </div>
-              <CardDescription>AI-generoitu analyysi ja toimintasuunnitelma</CardDescription>
             </CardHeader>
-            <CardContent>
-              {!result && !isLoading && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-center py-12 text-gray-500"
-                >
-                  <Brain className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg font-medium mb-2">Valmis analysoimaan</p>
-                  <p>Syötä teksti vasemmalle ja paina "Luo yhteenveto"</p>
-                </motion.div>
-              )}
+            <CardContent className="space-y-6">
+              {/* Summary */}
+              <div>
+                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  Tiivistelmä
+                </h3>
+                <p className="text-gray-700 leading-relaxed bg-blue-50 p-4 rounded-lg border border-blue-100">
+                  {result.summary}
+                </p>
+              </div>
 
-              {isLoading && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
-                  <SkeletonResult />
-                </motion.div>
-              )}
+              <Separator />
 
-              {result && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="space-y-6"
-                >
-                  {/* Content Type Badge */}
-                  {result.contentType && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 }}
-                      className="flex items-center gap-2"
-                    >
-                      <Badge variant="outline" className="text-blue-700 border-blue-200 bg-blue-50/50 backdrop-blur-sm">
-                        Tunnistettu:{" "}
-                        {result.contentType === "meeting"
-                          ? "👥 Kokous"
-                          : result.contentType === "email"
-                            ? "📧 Sähköposti"
-                            : result.contentType === "document"
-                              ? "📄 Dokumentti"
-                              : "📝 Yleinen teksti"}
-                      </Badge>
-                    </motion.div>
-                  )}
+              <Tabs defaultValue="keypoints" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="keypoints">Tärkeimmät</TabsTrigger>
+                  <TabsTrigger value="actions">Toimenpiteet</TabsTrigger>
+                  <TabsTrigger value="deadlines">Deadlinet</TabsTrigger>
+                  <TabsTrigger value="decisions">Päätökset</TabsTrigger>
+                </TabsList>
 
-                  {/* Summary */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-blue-600" />
-                      Yhteenveto
-                    </h3>
-                    <p className="text-gray-700 leading-relaxed bg-blue-50/70 backdrop-blur-sm p-4 rounded-lg border border-blue-100 shadow-sm">
-                      {result.summary}
-                    </p>
-                  </motion.div>
-
-                  <Separator />
-
-                  {/* Key Points */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      Tärkeimmät asiat
-                    </h3>
-                    <ul className="space-y-2">
-                      {result.keyPoints.map((point, index) => (
-                        <motion.li
-                          key={index}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.3 + index * 0.1 }}
-                          className="flex items-start gap-3 p-3 bg-green-50/70 backdrop-blur-sm rounded-lg border border-green-100 shadow-sm hover:shadow-md transition-all duration-300"
-                        >
-                          <span className="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
-                            {index + 1}
-                          </span>
-                          <span className="text-gray-700">{point}</span>
-                        </motion.li>
-                      ))}
-                    </ul>
-                  </motion.div>
-
-                  <Separator />
-
-                  {/* Action Items */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <ArrowRight className="h-4 w-4 text-orange-600" />
-                      Toimenpiteet
-                    </h3>
-                    <ul className="space-y-2">
-                      {result.actionItems.map((item, index) => (
-                        <motion.li
-                          key={index}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.4 + index * 0.1 }}
-                          className="flex items-start gap-3 p-3 bg-orange-50/70 backdrop-blur-sm rounded-lg border border-orange-100 shadow-sm hover:shadow-md transition-all duration-300"
-                        >
-                          <span className="flex-shrink-0 w-6 h-6 bg-orange-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
-                            {index + 1}
-                          </span>
-                          <span className="text-gray-700">{item}</span>
-                        </motion.li>
-                      ))}
-                    </ul>
-                  </motion.div>
-
-                  {/* Deadlines */}
-                  {result.deadlines && result.deadlines.length > 0 && (
-                    <>
-                      <Separator />
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5 }}
+                <TabsContent value="keypoints" className="space-y-3 mt-4">
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Tärkeimmät asiat
+                  </h3>
+                  <div className="space-y-2">
+                    {result.keyPoints.map((point, index) => (
+                      <div
+                        key={index}
+                        className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100"
                       >
-                        <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-red-600" />
-                          Deadlinet ja vastuuhenkilöt
-                        </h3>
-                        <div className="space-y-3">
-                          {result.deadlines.map((deadline, index) => (
-                            <motion.div
-                              key={index}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: 0.5 + index * 0.1 }}
-                              className="p-4 bg-red-50/70 backdrop-blur-sm rounded-lg border border-red-100 shadow-sm hover:shadow-md transition-all duration-300"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex-1">
-                                  <p className="font-medium text-gray-800">{deadline.task}</p>
-                                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                                    <span className="flex items-center gap-1">
-                                      <User className="h-3 w-3" />
-                                      {deadline.person}
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                      <Clock className="h-3 w-3" />
-                                      {deadline.deadline}
-                                    </span>
-                                  </div>
-                                </div>
-                                <Badge className={`${getPriorityColor(deadline.priority || "medium")} border`}>
+                        <div className="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                          {index + 1}
+                        </div>
+                        <p className="text-gray-700 leading-relaxed">{point}</p>
+                      </div>
+                    ))}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="actions" className="space-y-3 mt-4">
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-orange-600" />
+                    Toimenpiteet
+                  </h3>
+                  <div className="space-y-2">
+                    {result.actionItems.map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex items-start gap-3 p-3 bg-orange-50 rounded-lg border border-orange-100"
+                      >
+                        <div className="flex-shrink-0 w-6 h-6 bg-orange-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                          {index + 1}
+                        </div>
+                        <p className="text-gray-700 leading-relaxed">{item}</p>
+                      </div>
+                    ))}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="deadlines" className="space-y-3 mt-4">
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-red-600" />
+                    Deadlinet ja vastuuhenkilöt
+                  </h3>
+                  {result.deadlines && result.deadlines.length > 0 ? (
+                    <div className="space-y-2">
+                      {result.deadlines.map((deadline, index) => (
+                        <div
+                          key={index}
+                          className="flex items-start gap-3 p-3 bg-red-50 rounded-lg border border-red-100"
+                        >
+                          <div className="flex-shrink-0 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-gray-700 leading-relaxed mb-2">{deadline.task}</p>
+                            <div className="flex items-center gap-2 text-sm">
+                              <Badge variant="outline" className="text-gray-600">
+                                👤 {deadline.person}
+                              </Badge>
+                              <Badge variant="outline" className="text-gray-600">
+                                📅 {deadline.deadline}
+                              </Badge>
+                              {deadline.priority && (
+                                <Badge className={getPriorityColor(deadline.priority)}>
                                   {deadline.priority === "high"
-                                    ? "Kiireellinen"
-                                    : deadline.priority === "low"
-                                      ? "Matala"
-                                      : "Keskitaso"}
+                                    ? "🔴 Kiireellinen"
+                                    : deadline.priority === "medium"
+                                      ? "🟡 Normaali"
+                                      : "🟢 Matala"}
                                 </Badge>
-                              </div>
-                            </motion.div>
-                          ))}
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </motion.div>
-                    </>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic p-4 bg-gray-50 rounded-lg">
+                      Ei tunnistettuja deadlineja tai vastuuhenkilöitä.
+                    </p>
                   )}
+                </TabsContent>
 
-                  {/* Pending Decisions */}
-                  {result.pendingDecisions && result.pendingDecisions.length > 0 && (
-                    <>
-                      <Separator />
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.6 }}
-                      >
-                        <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                          <AlertCircle className="h-4 w-4 text-amber-600" />
-                          Avoimet päätökset
-                        </h3>
-                        <ul className="space-y-2">
-                          {result.pendingDecisions.map((decision, index) => (
-                            <motion.li
-                              key={index}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: 0.6 + index * 0.1 }}
-                              className="p-3 bg-amber-50/70 backdrop-blur-sm rounded-lg border border-amber-100 text-gray-700 shadow-sm hover:shadow-md transition-all duration-300"
-                            >
-                              {decision}
-                            </motion.li>
-                          ))}
-                        </ul>
-                      </motion.div>
-                    </>
-                  )}
-
-                  {/* Response Template */}
-                  {result.responseTemplate && (
-                    <>
-                      <Separator />
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.7 }}
-                      >
-                        <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-purple-600" />
-                          Vastausluonnos
-                        </h3>
-                        <div className="p-4 bg-purple-50/70 backdrop-blur-sm rounded-lg border border-purple-100 shadow-sm hover:shadow-md transition-all duration-300">
-                          <pre className="whitespace-pre-wrap text-gray-700 font-sans">{result.responseTemplate}</pre>
+                <TabsContent value="decisions" className="space-y-3 mt-4">
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-purple-600" />
+                    Avoimet päätökset
+                  </h3>
+                  {result.pendingDecisions && result.pendingDecisions.length > 0 ? (
+                    <div className="space-y-2">
+                      {result.pendingDecisions.map((decision, index) => (
+                        <div
+                          key={index}
+                          className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg border border-purple-100"
+                        >
+                          <div className="flex-shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                            {index + 1}
+                          </div>
+                          <p className="text-gray-700 leading-relaxed">{decision}</p>
                         </div>
-                      </motion.div>
-                    </>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic p-4 bg-gray-50 rounded-lg">Ei avoimia päätöksiä tunnistettu.</p>
                   )}
-                </motion.div>
+                </TabsContent>
+              </Tabs>
+
+              {/* Response template for emails */}
+              {result.responseTemplate && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                      <Mail className="h-5 w-5 text-blue-600" />
+                      Vastausluonnos
+                    </h3>
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                      <pre className="whitespace-pre-wrap text-gray-700 leading-relaxed font-sans">
+                        {result.responseTemplate}
+                      </pre>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        onClick={() => handleCopyToClipboard(result.responseTemplate!)}
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Kopioi vastaus
+                      </Button>
+                    </div>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
-        </div>
+        )}
 
-        {/* Footer */}
-        <div className="text-center mt-12 text-gray-500 text-sm">
-          <p>Summari.fi - Tekoäly-avusteinen tekstianalyysi suomeksi</p>
-          <p className="mt-1">Tietosuoja ja käyttöehdot noudattavat EU:n GDPR-säädöstä</p>
-        </div>
+        {/* Purchase section for non-premium users */}
+        {!isPremium && (
+          <div className="text-center pt-8 border-t border-gray-200 mt-8">
+            <p className="text-lg text-gray-600 mb-4">Tarvitset enemmän yhteenvetoja?</p>
+            <Button
+              onClick={handlePurchase}
+              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white px-8 py-3 text-lg font-medium mb-4"
+            >
+              <Crown className="h-5 w-5 mr-2" />
+              Hanki Unlimited - 19€/kk
+            </Button>
+            <p className="text-sm text-gray-500 mb-3">
+              ✅ Rajaton määrä yhteenvetoja • ✅ Ei mainoksia • ✅ Nopeampi prosessointi
+            </p>
+            <p className="text-xs text-gray-500">
+              💼 Laskutus tai yrityskäyttö? Ota yhteyttä:
+              <a href="mailto:summariapp@gmail.com" className="underline hover:text-gray-700 ml-1">
+                summariapp@gmail.com
+              </a>
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* Premium Banner */}
+      {showPremiumBanner && !isPremium && <PremiumBanner onClose={() => setShowPremiumBanner(false)} />}
+
+      <Toaster />
     </div>
   )
 }
