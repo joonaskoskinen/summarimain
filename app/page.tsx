@@ -28,7 +28,7 @@ import { generateSummary, type SummaryResult } from "./actions/summarize"
 import { createCheckoutSession } from "./actions/stripe"
 import { SkeletonResult } from "@/components/skeleton-result"
 import { InfoBox } from "@/components/info-box"
-import { getUsageData, incrementUsage, canUseService, isPremiumActive } from "../utils/usageTracker"
+import { getUsageData, incrementUsage, canUseService, isPremiumActive, revokePremium } from "../utils/usageTracker"
 
 export default function Home() {
   const [text, setText] = useState("")
@@ -40,8 +40,38 @@ export default function Home() {
 
   // Tarkista premium-status ja käyttöoikeudet sivun latautuessa
   useEffect(() => {
-    const data = getUsageData()
-    setUsageData(data)
+    const checkAndUpdatePremiumStatus = async () => {
+      const data = getUsageData()
+      setUsageData(data)
+
+      // Jos on customerId, tarkista Stripestä onko tilaus vielä aktiivinen
+      if (data.customerId && data.isPremium) {
+        try {
+          const response = await fetch("/api/check-subscription", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ customerId: data.customerId }),
+          })
+
+          const result = await response.json()
+
+          if (!result.hasActiveSubscription) {
+            // Tilaus ei ole enää aktiivinen, poista premium
+            revokePremium()
+            setUsageData(getUsageData())
+            toast({
+              title: "Premium vanhentunut",
+              description: "Tilauksen maksu on myöhässä. Premium-ominaisuudet poistettu käytöstä.",
+              variant: "destructive",
+            })
+          }
+        } catch (error) {
+          console.error("Failed to check subscription status:", error)
+        }
+      }
+    }
+
+    checkAndUpdatePremiumStatus()
   }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
