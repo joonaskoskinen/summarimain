@@ -655,8 +655,8 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
 
             <p className="text-xs text-gray-500">
               💼 Laskutus tai yrityskäyttö? Ota yhteyttä:
-              <a href="mailto:summariapp@gmail.com" className="underline hover:text-gray-700 ml-1">
-                summariapp@gmail.com
+              <a href="mailto:tuki@summari.fi" className="underline hover:text-gray-700 ml-1">
+                tuki@summari.fi
               </a>
             </p>
           </div>
