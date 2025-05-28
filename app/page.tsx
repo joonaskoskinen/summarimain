@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -27,6 +28,7 @@ import { generateSummary, type SummaryResult } from "./actions/summarize"
 import { createCheckoutSession } from "./actions/stripe"
 import { PremiumBanner } from "@/components/premium-banner"
 import { canUseService, incrementUsage, isPremiumActive } from "../utils/usageTracker"
+import { SkeletonResult } from "@/components/skeleton-result"
 
 export default function SummariApp() {
   const [content, setContent] = useState("")
@@ -180,19 +182,19 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 bg-[url('/noise.png')] bg-fixed">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
               <Brain className="h-7 w-7 text-white" />
             </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 bg-clip-text text-transparent">
               Summari
             </h1>
             {isPremium && (
-              <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0">
+              <Badge className="bg-gradient-to-r from-amber-500 via-orange-400 to-orange-500 text-white border-0">
                 <Crown className="h-3 w-3 mr-1" />
                 Unlimited
               </Badge>
@@ -226,7 +228,7 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Input Section */}
-          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <Card className="shadow-xl border border-white/20 bg-white/80 backdrop-blur-md transition-all duration-300 hover:shadow-blue-100/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl">
                 <FileText className="h-5 w-5 text-blue-600" />
@@ -279,7 +281,7 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
               <Button
                 onClick={handleSubmit}
                 disabled={isLoading || content.length < 10 || (!usageInfo.allowed && !isPremium)}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="w-full bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 hover:from-blue-700 hover:via-indigo-600 hover:to-purple-700 text-white font-medium py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
               >
                 {isLoading ? (
                   <>
@@ -311,7 +313,7 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
           </Card>
 
           {/* Results Section */}
-          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <Card className="shadow-xl border border-white/20 bg-white/80 backdrop-blur-md transition-all duration-300 hover:shadow-purple-100/20">
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle className="flex items-center gap-2 text-xl">
@@ -323,7 +325,7 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
                     onClick={downloadAsText}
                     variant="outline"
                     size="sm"
-                    className="border-green-300 text-green-700 hover:bg-green-50"
+                    className="border-green-300 text-green-700 hover:bg-green-50 transition-all duration-200 hover:scale-105 active:scale-95"
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Lataa .txt
@@ -334,27 +336,39 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
             </CardHeader>
             <CardContent>
               {!result && !isLoading && (
-                <div className="text-center py-12 text-gray-500">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-12 text-gray-500"
+                >
                   <Brain className="h-16 w-16 mx-auto mb-4 text-gray-300" />
                   <p className="text-lg font-medium mb-2">Valmis analysoimaan</p>
                   <p>Syötä teksti vasemmalle ja paina "Luo yhteenveto"</p>
-                </div>
+                </motion.div>
               )}
 
               {isLoading && (
-                <div className="text-center py-12">
-                  <Loader2 className="h-16 w-16 mx-auto mb-4 text-blue-600 animate-spin" />
-                  <p className="text-lg font-medium text-gray-700 mb-2">Analysoidaan tekstiä...</p>
-                  <p className="text-gray-500">Tämä kestää muutaman sekunnin</p>
-                </div>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
+                  <SkeletonResult />
+                </motion.div>
               )}
 
               {result && (
-                <div className="space-y-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="space-y-6"
+                >
                   {/* Content Type Badge */}
                   {result.contentType && (
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-blue-700 border-blue-200">
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="flex items-center gap-2"
+                    >
+                      <Badge variant="outline" className="text-blue-700 border-blue-200 bg-blue-50/50 backdrop-blur-sm">
                         Tunnistettu:{" "}
                         {result.contentType === "meeting"
                           ? "👥 Kokous"
@@ -364,78 +378,106 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
                               ? "📄 Dokumentti"
                               : "📝 Yleinen teksti"}
                       </Badge>
-                    </div>
+                    </motion.div>
                   )}
 
                   {/* Summary */}
-                  <div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
                     <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                       <FileText className="h-4 w-4 text-blue-600" />
                       Yhteenveto
                     </h3>
-                    <p className="text-gray-700 leading-relaxed bg-blue-50 p-4 rounded-lg border border-blue-100">
+                    <p className="text-gray-700 leading-relaxed bg-blue-50/70 backdrop-blur-sm p-4 rounded-lg border border-blue-100 shadow-sm">
                       {result.summary}
                     </p>
-                  </div>
+                  </motion.div>
 
                   <Separator />
 
                   {/* Key Points */}
-                  <div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
                     <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
                       Tärkeimmät asiat
                     </h3>
                     <ul className="space-y-2">
                       {result.keyPoints.map((point, index) => (
-                        <li
+                        <motion.li
                           key={index}
-                          className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.3 + index * 0.1 }}
+                          className="flex items-start gap-3 p-3 bg-green-50/70 backdrop-blur-sm rounded-lg border border-green-100 shadow-sm hover:shadow-md transition-all duration-300"
                         >
                           <span className="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
                             {index + 1}
                           </span>
                           <span className="text-gray-700">{point}</span>
-                        </li>
+                        </motion.li>
                       ))}
                     </ul>
-                  </div>
+                  </motion.div>
 
                   <Separator />
 
                   {/* Action Items */}
-                  <div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                  >
                     <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                       <ArrowRight className="h-4 w-4 text-orange-600" />
                       Toimenpiteet
                     </h3>
                     <ul className="space-y-2">
                       {result.actionItems.map((item, index) => (
-                        <li
+                        <motion.li
                           key={index}
-                          className="flex items-start gap-3 p-3 bg-orange-50 rounded-lg border border-orange-100"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.4 + index * 0.1 }}
+                          className="flex items-start gap-3 p-3 bg-orange-50/70 backdrop-blur-sm rounded-lg border border-orange-100 shadow-sm hover:shadow-md transition-all duration-300"
                         >
                           <span className="flex-shrink-0 w-6 h-6 bg-orange-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
                             {index + 1}
                           </span>
                           <span className="text-gray-700">{item}</span>
-                        </li>
+                        </motion.li>
                       ))}
                     </ul>
-                  </div>
+                  </motion.div>
 
                   {/* Deadlines */}
                   {result.deadlines && result.deadlines.length > 0 && (
                     <>
                       <Separator />
-                      <div>
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5 }}
+                      >
                         <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-red-600" />
                           Deadlinet ja vastuuhenkilöt
                         </h3>
                         <div className="space-y-3">
                           {result.deadlines.map((deadline, index) => (
-                            <div key={index} className="p-4 bg-red-50 rounded-lg border border-red-100">
+                            <motion.div
+                              key={index}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.5 + index * 0.1 }}
+                              className="p-4 bg-red-50/70 backdrop-blur-sm rounded-lg border border-red-100 shadow-sm hover:shadow-md transition-all duration-300"
+                            >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex-1">
                                   <p className="font-medium text-gray-800">{deadline.task}</p>
@@ -458,10 +500,10 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
                                       : "Keskitaso"}
                                 </Badge>
                               </div>
-                            </div>
+                            </motion.div>
                           ))}
                         </div>
-                      </div>
+                      </motion.div>
                     </>
                   )}
 
@@ -469,22 +511,29 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
                   {result.pendingDecisions && result.pendingDecisions.length > 0 && (
                     <>
                       <Separator />
-                      <div>
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 }}
+                      >
                         <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                           <AlertCircle className="h-4 w-4 text-amber-600" />
                           Avoimet päätökset
                         </h3>
                         <ul className="space-y-2">
                           {result.pendingDecisions.map((decision, index) => (
-                            <li
+                            <motion.li
                               key={index}
-                              className="p-3 bg-amber-50 rounded-lg border border-amber-100 text-gray-700"
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.6 + index * 0.1 }}
+                              className="p-3 bg-amber-50/70 backdrop-blur-sm rounded-lg border border-amber-100 text-gray-700 shadow-sm hover:shadow-md transition-all duration-300"
                             >
                               {decision}
-                            </li>
+                            </motion.li>
                           ))}
                         </ul>
-                      </div>
+                      </motion.div>
                     </>
                   )}
 
@@ -492,18 +541,22 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
                   {result.responseTemplate && (
                     <>
                       <Separator />
-                      <div>
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.7 }}
+                      >
                         <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                           <FileText className="h-4 w-4 text-purple-600" />
                           Vastausluonnos
                         </h3>
-                        <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                        <div className="p-4 bg-purple-50/70 backdrop-blur-sm rounded-lg border border-purple-100 shadow-sm hover:shadow-md transition-all duration-300">
                           <pre className="whitespace-pre-wrap text-gray-700 font-sans">{result.responseTemplate}</pre>
                         </div>
-                      </div>
+                      </motion.div>
                     </>
                   )}
-                </div>
+                </motion.div>
               )}
             </CardContent>
           </Card>
