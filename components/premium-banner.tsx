@@ -1,184 +1,128 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Crown, X, Sparkles, Zap, CheckCircle, Loader2 } from "lucide-react"
-import { activatePremium } from "../utils/usageTracker"
-import { Confetti } from "./confetti"
+import type React from "react"
+import { XMarkIcon } from "@heroicons/react/24/outline"
 
 interface PremiumBannerProps {
-  remaining: number
-  onPremiumActivated: () => void
   onClose: () => void
 }
 
-export function PremiumBanner({ remaining, onPremiumActivated, onClose }: PremiumBannerProps) {
-  const [code, setCode] = useState("")
-  const [error, setError] = useState("")
-  const [isActivating, setIsActivating] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
-  const [showConfetti, setShowConfetti] = useState(false)
-
-  const handleActivate = async () => {
-    if (!code.trim()) {
-      setError("Syötä aktivointikoodi")
-      return
-    }
-
-    setIsActivating(true)
-    setError("")
-
-    // Simuloi latausaikaa
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    const success = activatePremium(code)
-
-    if (success) {
-      setShowSuccess(true)
-      setShowConfetti(true)
-
-      // Odota hetki ennen kuin kutsutaan callback
-      setTimeout(() => {
-        onPremiumActivated()
-      }, 2000)
-    } else {
-      setError("Virheellinen aktivointikoodi. Tarkista koodi ja yritä uudelleen.")
-    }
-
-    setIsActivating(false)
-  }
-
-  const handleConfettiComplete = () => {
-    setShowConfetti(false)
-  }
-
-  if (showSuccess) {
-    return (
-      <>
-        <Confetti show={showConfetti} onComplete={handleConfettiComplete} />
-        <Card className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 shadow-xl">
-          <CardContent className="p-8 text-center">
-            <div className="mx-auto w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mb-6 shadow-lg animate-pulse">
-              <Crown className="h-10 w-10 text-white" />
-            </div>
-            <h3 className="text-2xl font-bold text-green-800 mb-4">🎉 Tervetuloa Unlimited-käyttäjäksi!</h3>
-            <p className="text-green-700 mb-6">Sinulla on nyt rajaton pääsy kaikkiin Summarin ominaisuuksiin.</p>
-            <div className="flex items-center justify-center gap-4 text-sm text-green-600">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4" />
-                <span>Rajattomat yhteenvedot</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4" />
-                <span>Lataa .txt-tiedostoja</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4" />
-                <span>Prioriteettituki</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </>
-    )
-  }
-
+const PremiumBanner: React.FC<PremiumBannerProps> = ({ onClose }) => {
   return (
-    <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 shadow-xl">
-      <CardHeader className="relative">
-        <Button variant="ghost" size="sm" onClick={onClose} className="absolute right-2 top-2 hover:bg-amber-100">
-          <X className="h-4 w-4" />
-        </Button>
-
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
-            <Crown className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <CardTitle className="text-xl text-amber-800">
-              {remaining === 0 ? "Ilmaiset yhteenvedot loppuivat!" : "Päivitä Unlimited-tiliin"}
-            </CardTitle>
-            <CardDescription className="text-amber-700">
-              {remaining === 0
-                ? "Aktivoi Unlimited-koodi tai osta tilaus jatkaaksesi"
-                : `${remaining} ilmaista yhteenvetoa jäljellä tänään`}
-            </CardDescription>
-          </div>
+    <div className="fixed inset-x-0 bottom-0 z-50 bg-gradient-to-r from-amber-500 to-amber-400 text-white py-2 px-4">
+      <div className="container mx-auto flex items-center justify-between">
+        <div className="flex items-center">
+          <span className="text-lg font-semibold mr-4">Hanki Unlimited!</span>
+          <p className="text-sm">Nauti rajoittamattomasta käytöstä.</p>
         </div>
-      </CardHeader>
-
-      <CardContent className="space-y-6">
-        {/* Unlimited Benefits */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="flex items-center gap-3 p-3 bg-white/70 rounded-lg border border-amber-200">
-            <Zap className="h-5 w-5 text-amber-600" />
-            <div>
-              <p className="font-semibold text-amber-800 text-sm">Rajattomat yhteenvedot</p>
-              <p className="text-amber-600 text-xs">Ei päivittäisiä rajoja</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 p-3 bg-white/70 rounded-lg border border-amber-200">
-            <Sparkles className="h-5 w-5 text-amber-600" />
-            <div>
-              <p className="font-semibold text-amber-800 text-sm">Premium-ominaisuudet</p>
-              <p className="text-amber-600 text-xs">Lataukset & jakaminen</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 p-3 bg-white/70 rounded-lg border border-amber-200">
-            <Crown className="h-5 w-5 text-amber-600" />
-            <div>
-              <p className="font-semibold text-amber-800 text-sm">Prioriteettituki</p>
-              <p className="text-amber-600 text-xs">Nopea asiakaspalvelu</p>
-            </div>
-          </div>
+        <div className="flex items-center">
+          <button
+            className="bg-white text-amber-500 hover:bg-amber-100 font-semibold py-2 px-4 rounded mr-4"
+            onClick={() => {
+              window.location.href = "https://buy.stripe.com/6sIeX8cNq1YJg0UaEF"
+            }}
+          >
+            Päivitä
+          </button>
+          <button onClick={onClose} className="text-white hover:text-amber-100 focus:outline-none">
+            <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+          </button>
         </div>
-
-        {/* Activation Code Section */}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-amber-800 mb-2">Aktivointikoodi:</label>
-            <div className="flex gap-3">
-              <Input
-                type="text"
-                placeholder="Syötä Unlimited-koodi..."
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                className="flex-1 border-amber-300 focus:border-amber-500"
-                onKeyDown={(e) => e.key === "Enter" && handleActivate()}
-              />
-              <Button
-                onClick={handleActivate}
-                disabled={isActivating || !code.trim()}
-                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-6"
+      </div>
+      <div className="container mx-auto mt-2">
+        <details className="group">
+          <summary className="flex items-center font-medium cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 rounded">
+            <span className="text-sm text-white mr-1">Mitä Premium sisältää?</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth="1.5"
+              stroke="currentColor"
+              className="w-4 h-4 ml-1 group-open:rotate-180 transition-transform"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </summary>
+          <div className="mt-2 text-sm text-white">
+            <ul>
+              <li>✅ Rajoittamaton määrä tiivistelmiä</li>
+              <li>✅ Ei mainoksia</li>
+              <li>✅ Nopeampi prosessointi</li>
+              <li>✅ Tuki kehitykselle</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+      <div className="container mx-auto mt-2">
+        <details className="group">
+          <summary className="flex items-center font-medium cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 rounded">
+            <span className="text-sm text-white mr-1">Lunasta koodi</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth="1.5"
+              stroke="currentColor"
+              className="w-4 h-4 ml-1 group-open:rotate-180 transition-transform"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </summary>
+          <div className="mt-2 text-sm text-white">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const code = (document.getElementById("code") as HTMLInputElement).value
+                fetch("/api/redeem", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ code }),
+                })
+                  .then((res) => res.json())
+                  .then((data) => {
+                    if (data.success) {
+                      alert("Koodi lunastettu onnistuneesti! Päivitä sivu.")
+                      window.location.reload()
+                    } else {
+                      alert("Virhe: " + data.message)
+                    }
+                  })
+              }}
+            >
+              <label htmlFor="code" className="block text-sm font-medium text-white">
+                Koodi:
+              </label>
+              <div className="mt-1">
+                <input
+                  type="text"
+                  name="code"
+                  id="code"
+                  className="shadow-sm focus:ring-amber-500 focus:border-amber-500 block w-full sm:text-sm border-gray-300 rounded-md text-black"
+                  placeholder="XXXX-XXXX-XXXX"
+                />
+              </div>
+              <button
+                type="submit"
+                className="bg-white text-amber-500 hover:bg-amber-100 font-semibold py-2 px-4 rounded mt-2"
               >
-                {isActivating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Aktivoidaan...
-                  </>
-                ) : (
-                  "Aktivoi"
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {error && (
-            <Alert className="border-red-200 bg-red-50">
-              <AlertDescription className="text-red-700">{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <div className="text-center">
+                Lunasta
+              </button>
+            </form>
             <p className="text-sm text-amber-700 mb-3">Ei koodia? Hanki Unlimited-tilaus:</p>
+            <p className="text-xs text-amber-600 mb-3">
+              💼 Laskutus tai yrityskäyttö? Ota yhteyttä:
+              <a href="mailto:summariapp@gmail.com" className="underline hover:text-amber-800 ml-1">
+                summariapp@gmail.com
+              </a>
+            </p>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </details>
+      </div>
+    </div>
   )
 }
+
+export default PremiumBanner
