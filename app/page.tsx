@@ -38,6 +38,7 @@ import {
   revokePremium,
   redeemCode,
 } from "../utils/usageTracker"
+import { ImageUpload } from "@/components/image-upload"
 
 export default function Home() {
   const [text, setText] = useState("")
@@ -207,6 +208,17 @@ export default function Home() {
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // Uusi funktio tekstin lisäämiseen kuvasta
+  const handleTextExtracted = (extractedText: string) => {
+    setText(extractedText)
+    // Vieritä automaattisesti tekstikenttään
+    const textArea = document.querySelector("textarea")
+    if (textArea) {
+      textArea.focus()
+      textArea.scrollIntoView({ behavior: "smooth", block: "center" })
     }
   }
 
@@ -380,6 +392,9 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
           </section>
         )}
 
+        {/* Image upload for text extraction */}
+        <ImageUpload onTextExtracted={handleTextExtracted} isLoading={isLoading} isPremium={isPremium} />
+
         {/* Main input area */}
         <main>
           <Card className="mb-8 shadow-lg border-0 bg-white/90 backdrop-blur-sm">
@@ -407,7 +422,7 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
             </CardHeader>
             <CardContent className="space-y-4">
               <Textarea
-                placeholder="Liitä tähän kokousmuistio, sähköposti, dokumentti tai mikä tahansa teksti jonka haluat tiivistää..."
+                placeholder="Liitä tähän kokousmuistio, sähköposti, dokumentti tai mikä tahansa teksti jonka haluat tiivistää... Tai käytä yllä olevaa kuvantunnistusta!"
                 className="min-h-[200px] text-base leading-relaxed resize-none border-gray-200 focus:border-blue-400 focus:ring-blue-400"
                 value={text}
                 onChange={handleInputChange}
@@ -718,10 +733,10 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
               </div>
               <div className="p-4 bg-white/80 rounded-lg border border-blue-200">
                 <div className="text-blue-600 text-2xl mb-2" aria-hidden="true">
-                  🚀
+                  📝
                 </div>
-                <h4 className="font-semibold mb-1">Nopeampi prosessointi</h4>
-                <p className="text-sm text-gray-600">Prioriteettijono ja parempi suorituskyky</p>
+                <h4 className="font-semibold mb-1">Tekstintunnistus kuvista</h4>
+                <p className="text-sm text-gray-600">Tunnista teksti dokumenteista ja muistiinpanoista</p>
               </div>
               <div className="p-4 bg-white/80 rounded-lg border border-purple-200">
                 <div className="text-purple-600 text-2xl mb-2" aria-hidden="true">
