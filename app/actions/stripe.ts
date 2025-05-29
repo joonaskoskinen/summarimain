@@ -25,18 +25,7 @@ export async function createCheckoutSession(): Promise<{ url: string | null; err
       payment_method_types: ["card"],
       line_items: [
         {
-          price_data: {
-            currency: "eur",
-            product_data: {
-              name: "Summari Unlimited",
-              description: "Rajaton käyttö + kaikki premium-ominaisuudet",
-              images: ["https://summari.fi/logo.png"],
-            },
-            unit_amount: 1900, // 19.00 EUR in cents
-            recurring: {
-              interval: "month",
-            },
-          },
+          price: "price_1RU2FYFYjlpbLtmkc9yxfQdf", // ← käytetään olemassa olevaa Stripe-hintaa
           quantity: 1,
         },
       ],
