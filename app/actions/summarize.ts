@@ -80,6 +80,8 @@ Tunnista ja analysoi:
 - Avoimet päätökset tai epäselvyydet
 - Jos sähköposti, luo vastausluonnos
 
+TÄRKEÄÄ: Analysoi VAIN annettu sisältö. Älä käytä esimerkkejä tai aiempia vastauksia. Jos ei ole avoimia päätöksiä, jätä pendingDecisions tyhjäksi [].
+
 Vastaa VAIN kelvollisella JSON:lla tässä tarkkassa muodossa:
 {
   "contentType": "meeting|email|document|general",
@@ -99,8 +101,8 @@ Vastaa VAIN kelvollisella JSON:lla tässä tarkkassa muodossa:
     {"task": "Toinen tehtävä", "person": "Toinen henkilö", "deadline": "ensi viikko", "priority": "medium"}
   ],
   "pendingDecisions": [
-    "Versiopäivitysten tiheydestä ei tehty päätöstä → palataan ensi viikolla",
-    "Budjettikysymys jäi auki → Mari selvittää"
+    "Kuvaus avoimesta päätöksestä tai epäselvyydestä",
+    "Toinen avoin asia joka vaatii päätöksen"
   ],
   "responseTemplate": "Vastausluonnos jos sisältö on sähköposti, muuten null"
 }`
@@ -117,7 +119,7 @@ Vastaa VAIN kelvollisella JSON:lla tässä tarkkassa muodossa:
     const { text } = await generateText({
       model: "llama-3.1-8b-instant",
       prompt,
-      temperature: 0.1,
+      temperature: 0.3,
       maxTokens: 1500,
       apiKey,
     })
