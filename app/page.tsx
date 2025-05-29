@@ -788,6 +788,20 @@ Luotu Summari.fi:ssä ${new Date().toLocaleDateString("fi-FI")}
         </Dialog>
       </div>
 
+      {/* Feedback section with emoji reactions */}
+      {/* Simple feedback */}
+      <div className="text-center mt-12 mb-8 p-6 bg-gray-50 rounded-lg">
+        <p className="text-gray-600 mb-3">
+          <strong>Mitä jäit kaipaamaan?</strong> Kerro meille:
+          <a
+            href="mailto:tuki@summari.fi?subject=Kehitysehdotus&body=Hei! Toivoisin Summariin seuraavaa ominaisuutta:"
+            className="text-blue-600 hover:underline ml-1"
+          >
+            tuki@summari.fi
+          </a>
+        </p>
+      </div>
+
       <Toaster />
     </div>
   )
