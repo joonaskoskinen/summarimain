@@ -295,7 +295,7 @@ export function ImageUpload({ onTextExtracted, isLoading, isPremium }: ImageUplo
               <div className="bg-blue-50 p-3 rounded-lg mb-4 text-sm text-blue-800">
                 <Eye className="h-4 w-4 inline mr-2" />
                 <strong>Näin se toimii:</strong> Raahaa kuva tähän tai klikkaa "Valitse kuva". Tunnistamme tekstin ja
-                lisäämme sen automaattisesti ylempään tekstikenttään!
+                lisäämme sen automaattisesti alempaan tekstikenttään!
               </div>
             )}
 
